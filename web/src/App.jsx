@@ -16,7 +16,6 @@ export default function App() {
   const [user, setUser] = useState(null);
   const [children, setChildren] = useState([]);
 
-  // 首頁讀取所有孩子
   useEffect(() => {
     const all = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
     setChildren(all);
@@ -79,62 +78,93 @@ export default function App() {
     if (points >= 24) return "🏆 第三階段完成";
     if (points >= 16) return "🥈 第二階段完成";
     if (points >= 8) return "🥉 第一階段完成";
-    return "準備起跑";
+    return "起跑中";
   };
 
-  const trackPosition = (chapter) => {
-    const percent = ((chapter - 1) / TOTAL_CHAPTERS) * 100;
-    return Math.min(percent, 100);
+  // === 圓形跑道位置計算 ===
+  const getPosition = (chapter) => {
+    const percent = (chapter - 1) / TOTAL_CHAPTERS;
+    const angle = percent * 2 * Math.PI - Math.PI / 2;
+
+    const r = 140;
+    const cx = 200;
+    const cy = 200;
+
+    const x = cx + r * Math.cos(angle);
+    const y = cy + r * Math.sin(angle);
+
+    return { x, y };
   };
 
   return (
     <div style={{ padding: 20 }}>
-      {/* ==== 首頁賽跑圈 ==== */}
-      <h1 style={{ textAlign: "center" }}>📖 路加福音 24 章閱讀賽跑</h1>
+      <h1 style={{ textAlign: "center" }}>📖 路加福音 24 章圓形賽跑</h1>
 
-      <div style={{
-        backgroundImage: "url('/track.png')",
-        backgroundSize: "cover",
-        backgroundRepeat: "no-repeat",
-        padding: 20,
-        borderRadius: 20,
-        marginBottom: 20
-      }}>
+      {/* === 圓形賽跑 SVG === */}
+      <div style={{ display: "flex", justifyContent: "center", marginBottom: 30 }}>
+        <svg width="400" height="400" style={{ background: "#f5f5f5", borderRadius: "50%" }}>
+          {/* 圓形跑道 */}
+          <circle
+            cx="200"
+            cy="200"
+            r="140"
+            stroke="#c49a6c"
+            strokeWidth="20"
+            fill="none"
+          />
+
+          {/* 起點 */}
+          <text x="190" y="40" fontSize="12">START</text>
+
+          {/* 孩子角色顯示 */}
+          {children.map((c) => {
+            const pos = getPosition(c.chapter);
+            return (
+              <g key={c.id}>
+                {/* 角色圖 */}
+                <image
+                  href={c.roleImg}
+                  x={pos.x - 15}
+                  y={pos.y - 15}
+                  width="30"
+                  height="30"
+                />
+
+                {/* 名字 */}
+                <text
+                  x={pos.x}
+                  y={pos.y - 20}
+                  fontSize="10"
+                  textAnchor="middle"
+                >
+                  {c.name}
+                </text>
+              </g>
+            );
+          })}
+        </svg>
+      </div>
+
+      {/* === 進度列表 === */}
+      <div>
         {children.map((c) => (
-          <div key={c.id} style={{ marginBottom: 15 }}>
-            <div style={{ display: "flex", alignItems: "center" }}>
-              <img src={c.roleImg} width="50" />
-              <strong style={{ marginLeft: 10 }}>{c.name}</strong>
-              <span style={{ marginLeft: 10 }}>{stageText(c.points)}</span>
-            </div>
-
-            <div style={{
-              background: "#ddd",
-              height: 12,
-              borderRadius: 10,
-              overflow: "hidden",
-              marginTop: 5
-            }}>
-              <div style={{
-                width: trackPosition(c.chapter) + "%",
-                height: "100%",
-                background: "#4caf50"
-              }} />
-            </div>
-
-            <div style={{ fontSize: 12 }}>
-              進度：{c.chapter - 1} / 24 章
-            </div>
+          <div key={c.id} style={{ marginBottom: 10 }}>
+            <img src={c.roleImg} width="40" style={{ verticalAlign: "middle" }} />
+            <strong style={{ marginLeft: 10 }}>{c.name}</strong>
+            <span style={{ marginLeft: 10 }}>{stageText(c.points)}</span>
+            <div>進度：{c.chapter - 1} / 24</div>
           </div>
         ))}
       </div>
 
-      {/* ==== 登入區 ==== */}
+      <hr />
+
+      {/* === 登入區 === */}
       {!user ? (
         <div style={{ textAlign: "center" }}>
           <h3>家長登入</h3>
           <input
-            placeholder="請輸入手機號碼"
+            placeholder="請輸入手機"
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
           />
@@ -148,7 +178,7 @@ export default function App() {
             <button onClick={logout} style={{ marginLeft: 20 }}>登出</button>
           </div>
 
-          <h3>新增孩子（選擇角色）</h3>
+          <h3>選擇角色新增孩子</h3>
           <div style={{ display: "flex", gap: 15 }}>
             {roleImages.map((r) => (
               <div key={r.name} style={{ textAlign: "center" }}>
@@ -165,7 +195,7 @@ export default function App() {
             .filter((c) => c.phone === user)
             .map((c) => (
               <div key={c.id} style={{ border: "1px solid #ccc", padding: 10, marginBottom: 10 }}>
-                <img src={c.roleImg} width="80" />
+                <img src={c.roleImg} width="60" />
                 <h3>{c.name}</h3>
                 <p>進度：{c.chapter - 1} / 24</p>
                 <p>點數：{c.points}</p>

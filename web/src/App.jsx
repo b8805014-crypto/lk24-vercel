@@ -1,4 +1,4 @@
-import { quizData } from "./quizData";
+import { quizData } from "./quizData.js";
 import { useState, useEffect } from "react";
 import "./App.css";
 

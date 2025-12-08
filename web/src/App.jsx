@@ -158,11 +158,46 @@ export default function App() {
 
   // ------------------- 跑道位置計算 -------------------
   const getPosition = (chapter) => {
-    const percent = (chapter - 1) / TOTAL_CHAPTERS;
-    const angle = percent * 2 * Math.PI - Math.PI / 2;
+    const progress = (chapter - 1) / TOTAL_CHAPTERS; // 0~1
+    const cx = 210;
+    const cy = 210;
+
+    const straight = 100; // 半條直線長
+    const radius = 90;    // 半圓半徑
+
+    const totalLen = 2 * straight + 2 * Math.PI * radius;
+    let d = progress * totalLen;
+
+    // 上直線（由左到右）
+    if (d <= straight) {
+      return { x: cx - straight + d, y: cy - radius };
+    }
+
+    d -= straight;
+
+    // 右半圓
+    if (d <= Math.PI * radius) {
+      const angle = -Math.PI / 2 + d / radius;
+      return {
+        x: cx + straight + radius * Math.cos(angle),
+        y: cy + radius * Math.sin(angle),
+      };
+    }
+
+    d -= Math.PI * radius;
+
+    // 下直線（由右到左）
+    if (d <= straight) {
+      return { x: cx + straight - d, y: cy + radius };
+    }
+
+    d -= straight;
+
+    // 左半圓
+    const angle = Math.PI / 2 + d / radius;
     return {
-      x: 210 + 145 * Math.cos(angle),
-      y: 210 + 145 * Math.sin(angle)
+      x: cx - straight + radius * Math.cos(angle),
+      y: cy + radius * Math.sin(angle),
     };
   };
 

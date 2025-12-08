@@ -40,7 +40,7 @@ export default function App() {
     const name = prompt("請輸入孩子名字");
     if (!name) return;
 
-    const child = {
+    const updated = [...children, {
       id: Date.now(),
       name,
       role: role.name,
@@ -49,67 +49,53 @@ export default function App() {
       points: 0,
       todayRead: "",
       todayParent: ""
-    };
+    }];
 
-    const updated = [...children, child];
     setChildren(updated);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
   };
 
   const deleteChild = (id) => {
-    if (!confirm("確定要刪除這個孩子嗎？")) return;
-    const updated = children.filter((c) => c.id !== id);
+    if (!confirm("確定刪除嗎？")) return;
+    const updated = children.filter(c => c.id !== id);
     setChildren(updated);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
   };
 
   const readChapter = (id) => {
     const today = new Date().toISOString().slice(0, 10);
-
-    const updated = children.map((c) => {
+    const updated = children.map(c => {
       if (c.id !== id) return c;
       if (c.todayRead === today) {
-        alert("今天已經讀過了");
+        alert("今天已讀");
         return c;
       }
-      return {
-        ...c,
-        chapter: Math.min(c.chapter + 1, TOTAL_CHAPTERS),
-        points: c.points + 1,
-        todayRead: today
-      };
+      return { ...c, chapter: Math.min(c.chapter + 1, TOTAL_CHAPTERS), points: c.points + 1, todayRead: today };
     });
-
     setChildren(updated);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
   };
 
   const parentAddPoint = (id) => {
     const today = new Date().toISOString().slice(0, 10);
-
-    const updated = children.map((c) => {
+    const updated = children.map(c => {
       if (c.id !== id) return c;
       if (c.todayParent === today) {
-        alert("今天家長已經加過點了");
+        alert("家長今日已加點");
         return c;
       }
-      return {
-        ...c,
-        points: c.points + 1,
-        todayParent: today
-      };
+      return { ...c, points: c.points + 1, todayParent: today };
     });
-
     setChildren(updated);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
   };
 
   const getRoleImg = (roleName, points) => {
-    const role = roleImages.find(r => r.name === roleName);
-    if (!role) return "";
-    if (points >= 16) return role.imgs[2];
-    if (points >= 8) return role.imgs[1];
-    return role.imgs[0];
+    const r = roleImages.find(r => r.name === roleName);
+    if (!r) return "";
+    if (points >= 16) return r.imgs[2];
+    if (points >= 8) return r.imgs[1];
+    return r.imgs[0];
   };
 
   const getEvolveClass = (points) => {
@@ -121,76 +107,34 @@ export default function App() {
   const getPosition = (chapter) => {
     const percent = (chapter - 1) / TOTAL_CHAPTERS;
     const angle = percent * 2 * Math.PI - Math.PI / 2;
-    const r = 145;
-    const cx = 210;
-    const cy = 210;
     return {
-      x: cx + r * Math.cos(angle),
-      y: cy + r * Math.sin(angle)
+      x: 210 + 145 * Math.cos(angle),
+      y: 210 + 145 * Math.sin(angle)
     };
   };
 
   return (
     <div style={{ padding: 20 }}>
+
       <h1 style={{ textAlign: "center" }}>📖 路加福音 24 章圓形賽跑</h1>
 
-      {/* ===== 首頁(美化版) ===== */}
+      {/* 首頁 */}
       {page === "home" && (
         <>
-          <div style={{ display: "flex", justifyContent: "center", marginBottom: 30 }}>
-            <svg width="420" height="420" style={{ borderRadius: "50%" }}>
-              <defs>
-                <radialGradient id="bgGrad" cx="50%" cy="50%" r="50%">
-                  <stop offset="0%" stopColor="#fffde7" />
-                  <stop offset="100%" stopColor="#ffe0b2" />
-                </radialGradient>
-
-                <linearGradient id="trackGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" stopColor="#ffcc80" />
-                  <stop offset="100%" stopColor="#ffb74d" />
-                </linearGradient>
-              </defs>
-
-              <circle cx="210" cy="210" r="200" fill="url(#bgGrad)" />
-
+          <div style={{ display: "flex", justifyContent: "center" }}>
+            <svg width="420" height="420" className="bible-watermark">
               <circle
                 cx="210"
                 cy="210"
                 r="145"
-                stroke="url(#trackGrad)"
+                stroke="#ffb74d"
                 strokeWidth="22"
                 fill="none"
+                className="track-animate"
               />
 
-              <text x="195" y="30" fontSize="14">🏁 START</text>
-              <text x="195" y="410" fontSize="14">🚩 FINISH</text>
+              <text x="190" y="30">🏁 START</text>
 
-              {/* 章節刻度 */}
-              {Array.from({ length: 24 }).map((_, i) => {
-                const angle = (i / 24) * 2 * Math.PI - Math.PI / 2;
-                const r1 = 145;
-                const r2 = 165;
-                const cx = 210;
-                const cy = 210;
-                const x1 = cx + r1 * Math.cos(angle);
-                const y1 = cy + r1 * Math.sin(angle);
-                const x2 = cx + r2 * Math.cos(angle);
-                const y2 = cy + r2 * Math.sin(angle);
-
-                return (
-                  <line
-                    key={i}
-                    x1={x1}
-                    y1={y1}
-                    x2={x2}
-                    y2={y2}
-                    stroke="#8d6e63"
-                    strokeWidth="2"
-                  />
-                );
-              })}
-
-              {/* 角色 */}
               {children.map((c) => {
                 const pos = getPosition(c.chapter);
                 return (
@@ -203,54 +147,30 @@ export default function App() {
                       height="36"
                       className={getEvolveClass(c.points)}
                     />
-                    <rect
-                      x={pos.x - 22}
-                      y={pos.y - 38}
-                      rx="6"
-                      ry="6"
-                      width="44"
-                      height="18"
-                      fill="rgba(255,255,255,0.85)"
-                    />
-                    <text
-                      x={pos.x}
-                      y={pos.y - 25}
-                      fontSize="10"
-                      textAnchor="middle"
-                      fill="#5d4037"
-                    >
+                    <text x={pos.x} y={pos.y - 22} fontSize="10" textAnchor="middle">
                       {c.name}
                     </text>
                   </g>
                 );
               })}
 
-              <text
-                x="210"
-                y="215"
-                fontSize="16"
-                textAnchor="middle"
-                fill="#6d4c41"
-                fontWeight="bold"
-              >
-                路加福音 24 章
+              <text x="210" y="215" textAnchor="middle" fontWeight="bold">
+                LUKE 24
               </text>
             </svg>
           </div>
 
-          {/* 排行榜 */}
           <h3 style={{ textAlign: "center" }}>🏆 排行榜</h3>
           {[...children]
             .sort((a, b) => b.points - a.points)
             .map((c, i) => (
               <div key={c.id} style={{ textAlign: "center" }}>
-                第 {i + 1} 名：{c.name}（{c.points} 點）
+                第{i + 1}名：{c.name}（{c.points}點）
               </div>
             ))}
 
           {!user && (
-            <div style={{ textAlign: "center", marginTop: 20 }}>
-              <h3>家長登入</h3>
+            <div style={{ textAlign: "center" }}>
               <input
                 placeholder="請輸入手機"
                 value={phone}
@@ -263,19 +183,19 @@ export default function App() {
         </>
       )}
 
-      {/* ===== 管理頁(登入後) ===== */}
+      {/* 管理頁 */}
       {user && page === "manage" && (
         <>
-          <div style={{ marginBottom: 10 }}>
+          <div>
             登入中：{user}
-            <button onClick={() => setPage("home")} style={{ marginLeft: 10 }}>回首頁</button>
-            <button onClick={logout} style={{ marginLeft: 10 }}>登出</button>
+            <button onClick={() => setPage("home")}>回首頁</button>
+            <button onClick={logout}>登出</button>
           </div>
 
           <h3>新增孩子</h3>
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
             {roleImages.map((r) => (
-              <div key={r.name} style={{ textAlign: "center", width: 100 }}>
+              <div key={r.name} style={{ textAlign: "center" }}>
                 <img src={r.imgs[0]} width="60" />
                 <div>{r.name}</div>
                 <button onClick={() => addChild(r)}>選擇</button>
@@ -285,7 +205,7 @@ export default function App() {
 
           <hr />
 
-          <h3>孩子管理（可刪除）</h3>
+          <h3>孩子管理</h3>
           {children.filter(c => c.phone === user).map((c) => (
             <div key={c.id} style={{ border: "1px solid #ccc", marginBottom: 10, padding: 10 }}>
               <img
@@ -293,12 +213,13 @@ export default function App() {
                 width="60"
                 className={getEvolveClass(c.points)}
               />
+
               <h4>{c.name}</h4>
-              <p>章節：{c.chapter - 1} / 24</p>
+              <p>章節：{c.chapter - 1}/24</p>
               <p>點數：{c.points}</p>
 
-              <button onClick={() => readChapter(c.id)}>📖 今日讀經 +1</button>{" "}
-              <button onClick={() => parentAddPoint(c.id)}>👨‍👩‍👧 家長陪讀 +1</button>{" "}
+              <button onClick={() => readChapter(c.id)}>📖 讀經 +1</button>
+              <button onClick={() => parentAddPoint(c.id)}>👨‍👩‍👧 陪讀 +1</button>
               <button onClick={() => deleteChild(c.id)}>❌ 刪除</button>
             </div>
           ))}

@@ -1,129 +1,16 @@
-/* 基本排版 */
-body {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans TC", "Helvetica Neue", Arial;
-  background: #fff;
-  margin: 0;
-  padding: 0;
-}
-
-/* 首頁左右配置 */
-.home-layout {
-  display: flex;
-  gap: 20px;
-  align-items: flex-start;
-}
-
-/* 左邊跑道區 */
-.left-track {
-  position: relative;
-}
-
-/* 標題置中（在左區塊寬度內置中） */
-.title-center {
-  text-align: center;
-  margin-top: 0;
-}
-
-/* 右側經文，靠旁顯示（右方） */
-.right-verse {
-  width: 260px;
-  padding: 20px;
-  background: linear-gradient(135deg, #fff7e6, #ffe0b2);
-  border-radius: 20px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.12);
-  height: 300px;
-}
-.verse-title {
-  color: #d35400;
-  margin: 0 0 10px;
-}
-.verse-main {
-  font-size: 22px;
-  font-weight: bold;
-  line-height: 1.5;
-}
-.verse-ref {
-  text-align: right;
-  margin-top: 20px;
-  font-weight: bold;
-}
-
-/* 管理頁的陪讀區 */
-.read-box {
-  background: #e8f5e9;
-  padding: 15px;
-  border-radius: 10px;
-  margin-bottom: 20px;
-}
-
-/* 角色進化 class（範例：可加 CSS 特效）*/
-.evolve-1 { filter: none; }
-.evolve-2 { transform: scale(1.05); transition: transform .3s ease; }
-.evolve-3 { transform: scale(1.15); transition: transform .3s ease; }
-
-/* fireworks overlay */
-.fireworks-overlay {
-  pointer-events: none;
+.fireworks {
   position: fixed;
   inset: 0;
+  background: rgba(0,0,0,0.4);
+  font-size: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   z-index: 999;
-  overflow: visible;
-}
-.fireworks-overlay .firework {
-  position: absolute;
-  width: 6px;
-  height: 6px;
-  background: radial-gradient(circle, #fff 0%, transparent 60%);
-  border-radius: 50%;
-  opacity: 0;
-}
-.fireworks-overlay.active .firework {
-  animation: fw-pop 900ms ease-out forwards;
-}
-/* 分幾種隨機位置 */
-.firework.spark-0 { left: 50%; top: 30%; animation-delay: 0ms; transform-origin: center; background: #ffd700; }
-.firework.spark-1 { left: 40%; top: 25%; animation-delay: 30ms; background: #ff6b6b; }
-.firework.spark-2 { left: 60%; top: 20%; animation-delay: 60ms; background: #6bffb6; }
-.firework.spark-3 { left: 35%; top: 40%; animation-delay: 90ms; background: #6bc2ff; }
-.firework.spark-4 { left: 65%; top: 35%; animation-delay: 120ms; background: #c96bff; }
-
-/* 移動與消散 */
-@keyframes fw-pop {
-  0% { opacity: 1; transform: scale(0.2) translateY(0); }
-  40% { transform: scale(1.4) translateY(-40px); }
-  70% { opacity: 0.9; transform: scale(0.9) translateY(-140px); }
-  100% { opacity: 0; transform: scale(0.6) translateY(-220px); }
+  animation: boom 0.5s infinite alternate;
 }
 
-/* flying point - 初始放在 start pos，CSS 會算出移動 */
-.flying-item {
-  position: fixed;
-  z-index: 1000;
-  will-change: transform, opacity;
-  pointer-events: none;
-  animation: fly-to-dest 1.0s cubic-bezier(.2,.8,.2,1) forwards;
+@keyframes boom {
+  from { transform: scale(1); }
+  to { transform: scale(1.3); }
 }
-.flying-item .flying-text {
-  background: linear-gradient(135deg,#fff59d,#ffd54f);
-  padding: 6px 10px;
-  border-radius: 999px;
-  box-shadow: 0 6px 14px rgba(0,0,0,0.12);
-  font-weight: bold;
-  transform: translate(-50%, -50%);
-}
-
-/* fly: we animate translate from start to dest using CSS vars - emulate JS-driven transform */
-@keyframes fly-to-dest {
-  0% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
-  70% { transform: translate(calc(var(--dest-x) - var(--start-x)), calc(var(--dest-y) - var(--start-y))) scale(1.15); opacity: 1; }
-  100% { transform: translate(calc(var(--dest-x) - var(--start-x)), calc(var(--dest-y) - var(--start-y))) scale(0.8); opacity: 0; }
-}
-
-/* fallback: we set CSS variables dynamically in-line from JS for each flying item */
-.flying-item[style] {
-  /* nothing else */
-}
-
-/* 孩子卡樣式 */
-.child-card img { vertical-align: middle; }
-.child-points { font-weight: bold; }

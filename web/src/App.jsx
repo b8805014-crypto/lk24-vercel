@@ -1,5 +1,5 @@
 import { quizData } from "./quizData";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import "./App.css";
 
 const TOTAL_CHAPTERS = 24;
@@ -34,7 +34,7 @@ export default function App() {
     setPage("home");
   };
 
-  /* ---------------- 陪讀 +1 ---------------- */
+  /* ---------------- 父母陪讀 ---------------- */
   const parentRead = () => {
     const today = new Date().toISOString().slice(0, 10);
     if (parentReadDate === today) return alert("今天已陪讀");
@@ -47,11 +47,10 @@ export default function App() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
     localStorage.setItem("parent_read_" + today, "yes");
     setParentReadDate(today);
-
     triggerFireworks();
   };
 
-  /* ---------------- 孩子 ---------------- */
+  /* ---------------- 新增 / 刪除孩子 ---------------- */
   const addChild = () => {
     const name = prompt("孩子名字");
     if (!name) return;
@@ -73,7 +72,7 @@ export default function App() {
   };
 
   const deleteChild = (id) => {
-    if (!confirm("刪除後記錄將完全消失，確定嗎？")) return;
+    if (!confirm("確定刪除？資料將無法復原")) return;
     const updated = children.filter(c => c.id !== id);
     setChildren(updated);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
@@ -89,13 +88,12 @@ export default function App() {
       if (answers[i] === q.answer) correct++;
     });
 
-    if (correct !== qs.length) {
-      alert("請全部答對才可得點");
-      return;
-    }
+    if (correct < qs.length) return alert("請全部答對");
 
     const updated = children.map(c => {
-      if (c.id !== id || c.todayQuiz === today) return c;
+      if (c.id !== id) return c;
+      if (c.todayQuiz === today) return c;
+
       return {
         ...c,
         points: c.points + 1,
@@ -109,65 +107,33 @@ export default function App() {
     triggerFireworks();
   };
 
-  /* ---------------- 煙火 ---------------- */
-  const fireworkAudio = useRef(null);
-
   const triggerFireworks = () => {
     setFireworks(true);
-
-    if (!fireworkAudio.current) {
-      fireworkAudio.current = new Audio("/firework.mp3");
-    }
-    fireworkAudio.current.currentTime = 0;
-    fireworkAudio.current.play();
-
-    setTimeout(() => setFireworks(false), 3000);
+    setTimeout(() => setFireworks(false), 2500);
   };
 
   /* ================= UI ================= */
   return (
     <div style={{ padding: 16 }}>
-
       {fireworks && (
-        <div style={{
-          position: "fixed",
-          top: 0,
-          left: 0,
-          right: 0,
-          fontSize: 32,
-          textAlign: "center"
-        }}>
-          🎆 🎇 🎆
-        </div>
+        <div style={{ textAlign: "center", fontSize: 28 }}>🎆🎆🎆</div>
       )}
 
-      {/* ---------------- 首頁 ---------------- */}
+      {/* ---------- 首頁（手機優化） ---------- */}
       {page === "home" && (
         <div style={{ maxWidth: 420, margin: "0 auto" }}>
           <h2 style={{ textAlign: "center" }}>📖 路加福音讀經精兵</h2>
 
-          {/* ✅ 保留賽跑圈，但不畫任何圖示 */}
-          <div style={{ display: "flex", justifyContent: "center" }}>
-            <svg width="260" height="260">
-              <circle
-                cx="130"
-                cy="130"
-                r="90"
-                stroke="#ffb74d"
-                strokeWidth="18"
-                fill="none"
-              />
-            </svg>
-          </div>
-
           <div style={{
-            background: "#f7f7f7",
-            padding: 14,
+            background: "#f5f5f5",
+            padding: 16,
             borderRadius: 8,
-            marginBottom: 16
+            marginBottom: 20
           }}>
             <b>今日力量經文</b>
-            <p>靠耶和華而得的喜樂是你們的力量</p>
+            <p style={{ marginTop: 8 }}>
+              靠耶和華而得的喜樂是你們的力量
+            </p>
           </div>
 
           <input
@@ -178,24 +144,27 @@ export default function App() {
               width: "100%",
               padding: 12,
               fontSize: 16,
-              marginBottom: 10
+              marginBottom: 12
             }}
           />
 
           <button
             onClick={login}
-            style={{ width: "100%", padding: 14, fontSize: 18 }}
+            style={{
+              width: "100%",
+              padding: 14,
+              fontSize: 18
+            }}
           >
             登入
           </button>
         </div>
       )}
 
-      {/* ---------------- 管理 / 答題 ---------------- */}
+      {/* ---------- 家長中心 / 答題（手機友善） ---------- */}
       {user && page === "manage" && (
         <div style={{ maxWidth: 480, margin: "0 auto" }}>
           <h3>家長中心</h3>
-
           <button onClick={logout}>登出</button>
 
           <hr />
@@ -226,8 +195,7 @@ export default function App() {
               }}
             >
               <h4>{c.name}</h4>
-              <p>章節：{c.chapter} / 24</p>
-              <p>點數：{c.points}</p>
+              <p>章節：{c.chapter}｜點數：{c.points}</p>
 
               {(quizData[c.chapter] || []).map((q, qi) => (
                 <div key={qi}
@@ -235,14 +203,18 @@ export default function App() {
                     border: "1px solid #ddd",
                     borderRadius: 6,
                     padding: 12,
-                    marginBottom: 10
+                    marginBottom: 12
                   }}
                 >
                   <b>{q.q}</b>
                   {q.options.map((o, oi) => (
                     <button
                       key={oi}
-                      style={{ display: "block", width: "100%", marginTop: 6 }}
+                      style={{
+                        display: "block",
+                        width: "100%",
+                        marginTop: 6
+                      }}
                       onClick={() => {
                         window.quizAns ||= {};
                         window.quizAns[c.id] ||= [];
@@ -256,12 +228,12 @@ export default function App() {
               ))}
 
               <button
-                style={{ width: "100%", padding: 12 }}
+                style={{ width: "100%", padding: 12, marginTop: 8 }}
                 onClick={() =>
                   answerQuiz(c.id, c.chapter, window.quizAns?.[c.id] || [])
                 }
               >
-                ✅ 送出答案
+                送出答案
               </button>
 
               <button

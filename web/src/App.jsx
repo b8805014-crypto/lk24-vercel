@@ -37,7 +37,10 @@ export default function App() {
     }
 
     fireworkAudio.current.currentTime = 0;
-    fireworkAudio.current.play();
+    fireworkAudio.current.play().catch(err => {
+      console.error("音效播放失敗:", err);
+    });
+
 
     setTimeout(() => {
       setFireworksActive(false);

@@ -262,70 +262,70 @@ export default function App() {
       {/* ------------------ 首頁 ------------------ */}
       {page === "home" && (
         {/* 左邊：跑道 */}
-<div className="left-track">
-  <h1 className="title-center">📖 路加福音讀經精兵</h1>
+        <div className="left-track">
+          <h1 className="title-center">📖 路加福音讀經精兵</h1>
 
-  <div
-    style={{
-      width: 420,
-      height: 420,
-      position: "relative",
-    }}
-  >
-    {/* 賽跑圖底圖 */}
-    <img
-      src="/track.png"
-      alt="track"
-      style={{
-        width: "100%",
-        height: "100%",
-        objectFit: "contain"
-      }}
-    />
-
-    {/* 角色疊在跑道上 */}
-    {children.map((c, index) => {
-      const pos = getPosition(c.chapter);
-      return (
-        <div
-          key={c.id}
-          style={{
-            position: "absolute",
-            left: pos.x - 18,
-            top: pos.y - 18,
-            textAlign: "center",
-            pointerEvents: "none"
-          }}
-        >
-          <img
-            src={getRoleImg(c.role, c.points)}
-            width="36"
-            className={getEvolveClass(c.points)}
-          />
           <div
             style={{
-              fontSize: 10,
-              marginTop: -2,
-              transform: `translateY(${getNameOffset(index)}px)`
+              width: 420,
+              height: 420,
+              position: "relative",
             }}
           >
-            {c.name}
-          </div>
-        </div>
-      );
-    })}
-  </div>
+            {/* 賽跑圖底圖 */}
+            <img
+              src="/track.png"
+              alt="track"
+              style={{
+                width: "100%",
+                height: "100%",
+                objectFit: "contain"
+              }}
+            />
 
-  {/* 排行榜 */}
-  <h3 style={{ textAlign: "center" }}>🏆 排行榜</h3>
-  {[...children]
-    .sort((a, b) => b.points - a.points)
-    .map((c, i) => (
-      <div key={c.id} style={{ textAlign: "center" }}>
-        🥇 第 {i + 1} 名：{c.name}（{c.points} 點）
+            {/* 角色疊在跑道上 */}
+            {children.map((c, index) => {
+              const pos = getPosition(c.chapter);
+              return (
+                <div
+                  key={c.id}
+                  style={{
+                    position: "absolute",
+                    left: pos.x - 18,
+                    top: pos.y - 18,
+                    textAlign: "center",
+                   pointerEvents: "none"
+                 }}
+               >
+                 <img
+                   src={getRoleImg(c.role, c.points)}
+                   width="36"
+                   className={getEvolveClass(c.points)}
+                 />
+                 <div
+                   style={{
+                     fontSize: 10,
+                     marginTop: -2,
+                     transform: `translateY(${getNameOffset(index)}px)`
+                   }}
+                 >
+                   {c.name}
+                 </div>
+               </div>
+             );
+          })}
+        </div>
+
+        {/* 排行榜 */}
+        <h3 style={{ textAlign: "center" }}>🏆 排行榜</h3>
+        {[...children]
+          .sort((a, b) => b.points - a.points)
+          .map((c, i) => (
+            <div key={c.id} style={{ textAlign: "center" }}>
+              🥇 第 {i + 1} 名：{c.name}（{c.points} 點）
+            </div>
+          ))}
       </div>
-    ))}
-</div>
           
           {/* 右邊美編經文（靠旁） */}
           <div className="right-verse">

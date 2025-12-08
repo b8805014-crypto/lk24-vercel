@@ -4,17 +4,19 @@ const TOTAL_CHAPTERS = 24;
 const STORAGE_KEY = "lk24_children_global";
 
 const roleImages = [
-  { name: "皮卡丘", imgs: ["/roles/pikachu1.png", "/roles/pikachu2.png", "/roles/pikachu3.png"] },
-  { name: "瑪利歐", imgs: ["/roles/mario1.png", "/roles/mario2.png", "/roles/mario3.png"] },
-  { name: "音速小子", imgs: ["/roles/sonic1.png", "/roles/sonic2.png", "/roles/sonic3.png"] },
-  { name: "卡比", imgs: ["/roles/kirby1.png", "/roles/kirby2.png", "/roles/kirby3.png"] },
-  { name: "薩爾達", imgs: ["/roles/zelda1.png", "/roles/zelda2.png", "/roles/zelda3.png"] },
+  { name: "kirby", imgs: ["/roles/kirby1.png", "/roles/kirby2.png", "/roles/kirby3.png"] },
+  { name: "pikachu", imgs: ["/roles/pikachu1.png", "/roles/pikachu2.png", "/roles/pikachu3.png"] },
+  { name: "傑尼龜", imgs: ["/roles/squirtle1.png", "/roles/squirtle2.png", "/roles/squirtle3.png"] },
+  { name: "妙蛙種子", imgs: ["/roles/bulbasaur1.png", "/roles/bulbasaur2.png", "/roles/bulbasaur3.png"] },
+  { name: "小火龍", imgs: ["/roles/charmander1.png", "/roles/charmander2.png", "/roles/charmander3.png"] },
+  { name: "綠毛蟲", imgs: ["/roles/caterpie1.png", "/roles/caterpie2.png", "/roles/caterpie3.png"] },
 ];
 
 export default function App() {
   const [phone, setPhone] = useState("");
   const [user, setUser] = useState(null);
   const [children, setChildren] = useState([]);
+  const [page, setPage] = useState("home"); // home | manage
 
   useEffect(() => {
     const all = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
@@ -24,11 +26,13 @@ export default function App() {
   const login = () => {
     if (!phone) return alert("請輸入手機");
     setUser(phone);
+    setPage("manage");
   };
 
   const logout = () => {
     setUser(null);
     setPhone("");
+    setPage("home");
   };
 
   const addChild = (role) => {
@@ -42,7 +46,8 @@ export default function App() {
       phone: user,
       chapter: 1,
       points: 0,
-      today: ""
+      todayRead: "",
+      todayParent: ""
     };
 
     const updated = [...children, child];
@@ -60,19 +65,17 @@ export default function App() {
   const readChapter = (id) => {
     const today = new Date().toISOString().slice(0, 10);
 
-    const updated = children.map((child) => {
-      if (child.id !== id) return child;
-
-      if (child.today === today) {
-        alert("今天已閱讀過");
-        return child;
+    const updated = children.map((c) => {
+      if (c.id !== id) return c;
+      if (c.todayRead === today) {
+        alert("今天已讀過章節");
+        return c;
       }
-
       return {
-        ...child,
-        chapter: Math.min(child.chapter + 1, TOTAL_CHAPTERS),
-        points: child.points + 1,
-        today
+        ...c,
+        chapter: Math.min(c.chapter + 1, TOTAL_CHAPTERS),
+        points: c.points + 1,
+        todayRead: today
       };
     });
 
@@ -80,11 +83,25 @@ export default function App() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
   };
 
-  const stageText = (points) => {
-    if (points >= 16) return "🏆 第三階段完成";
-    if (points >= 8) return "🥈 第二階段完成";
-    if (points >= 1) return "🥉 第一階段完成";
-    return "起跑中";
+  // 家長陪讀加點
+  const parentAddPoint = (id) => {
+    const today = new Date().toISOString().slice(0, 10);
+
+    const updated = children.map((c) => {
+      if (c.id !== id) return c;
+      if (c.todayParent === today) {
+        alert("今天家長已加過點");
+        return c;
+      }
+      return {
+        ...c,
+        points: c.points + 1,
+        todayParent: today
+      };
+    });
+
+    setChildren(updated);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
   };
 
   const getRoleImg = (roleName, points) => {
@@ -95,80 +112,76 @@ export default function App() {
     return role.imgs[0];
   };
 
-  // === 圓形跑道位置計算 ===
   const getPosition = (chapter) => {
     const percent = (chapter - 1) / TOTAL_CHAPTERS;
     const angle = percent * 2 * Math.PI - Math.PI / 2;
     const r = 140;
     const cx = 200;
     const cy = 200;
-    const x = cx + r * Math.cos(angle);
-    const y = cy + r * Math.sin(angle);
-    return { x, y };
+    return {
+      x: cx + r * Math.cos(angle),
+      y: cy + r * Math.sin(angle)
+    };
   };
 
   return (
     <div style={{ padding: 20 }}>
+
       <h1 style={{ textAlign: "center" }}>📖 路加福音 24 章圓形賽跑</h1>
 
-      <div style={{ display: "flex", justifyContent: "center", marginBottom: 30 }}>
-        <svg width="400" height="400" style={{ background: "#f5f5f5", borderRadius: "50%" }}>
-          <circle cx="200" cy="200" r="140" stroke="#c49a6c" strokeWidth="20" fill="none" />
-          <text x="190" y="40" fontSize="12">START</text>
+      {/* === 首頁：只顯示進度，不可刪除 === */}
+      {page === "home" && (
+        <>
+          <div style={{ display: "flex", justifyContent: "center", marginBottom: 30 }}>
+            <svg width="400" height="400" style={{ background: "#f5f5f5", borderRadius: "50%" }}>
+              <circle cx="200" cy="200" r="140" stroke="#c49a6c" strokeWidth="20" fill="none" />
+              <text x="190" y="40" fontSize="12">START</text>
 
-          {children.map((c) => {
-            const pos = getPosition(c.chapter);
-            return (
-              <g key={c.id}>
-                <image
-                  href={getRoleImg(c.role, c.points)}
-                  x={pos.x - 15}
-                  y={pos.y - 15}
-                  width="30"
-                  height="30"
-                />
-                <text x={pos.x} y={pos.y - 20} fontSize="10" textAnchor="middle">{c.name}</text>
-              </g>
-            );
-          })}
-        </svg>
-      </div>
-
-      {/* 進度列表 */}
-      <div>
-        {children.map((c) => (
-          <div key={c.id} style={{ marginBottom: 10 }}>
-            <img src={getRoleImg(c.role, c.points)} width="40" style={{ verticalAlign: "middle" }} />
-            <strong style={{ marginLeft: 10 }}>{c.name}</strong>
-            <span style={{ marginLeft: 10 }}>{stageText(c.points)}</span>
-            <div>進度：{c.chapter - 1} / 24</div>
-            <button onClick={() => deleteChild(c.id)} style={{ marginLeft: 10 }}>❌ 刪除</button>
-          </div>
-        ))}
-      </div>
-
-      <hr />
-
-      {!user ? (
-        <div style={{ textAlign: "center" }}>
-          <h3>家長登入</h3>
-          <input
-            placeholder="請輸入手機"
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-          />
-          <br /><br />
-          <button onClick={login}>登入</button>
-        </div>
-      ) : (
-        <div style={{ marginTop: 30 }}>
-          <div>
-            登入帳號：{user}
-            <button onClick={logout} style={{ marginLeft: 20 }}>登出</button>
+              {children.map((c) => {
+                const pos = getPosition(c.chapter);
+                return (
+                  <g key={c.id}>
+                    <image
+                      href={getRoleImg(c.role, c.points)}
+                      x={pos.x - 15}
+                      y={pos.y - 15}
+                      width="30"
+                      height="30"
+                    />
+                    <text x={pos.x} y={pos.y - 20} fontSize="10" textAnchor="middle">
+                      {c.name}
+                    </text>
+                  </g>
+                );
+              })}
+            </svg>
           </div>
 
-          <h3>選擇角色新增孩子</h3>
-          <div style={{ display: "flex", gap: 15 }}>
+          {!user && (
+            <div style={{ textAlign: "center" }}>
+              <h3>家長登入</h3>
+              <input
+                placeholder="請輸入手機"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+              />
+              <br /><br />
+              <button onClick={login}>登入</button>
+            </div>
+          )}
+        </>
+      )}
+
+      {/* === 第二畫面：管理頁（登入後） === */}
+      {user && page === "manage" && (
+        <>
+          <div style={{ marginBottom: 10 }}>
+            登入中：{user}
+            <button onClick={logout} style={{ marginLeft: 10 }}>登出</button>
+          </div>
+
+          <h3>新增孩子</h3>
+          <div style={{ display: "flex", gap: 10 }}>
             {roleImages.map((r) => (
               <div key={r.name} style={{ textAlign: "center" }}>
                 <img src={r.imgs[0]} width="60" />
@@ -180,18 +193,20 @@ export default function App() {
 
           <hr />
 
-          {children
-            .filter((c) => c.phone === user)
-            .map((c) => (
-              <div key={c.id} style={{ border: "1px solid #ccc", padding: 10, marginBottom: 10 }}>
-                <img src={getRoleImg(c.role, c.points)} width="60" />
-                <h3>{c.name}</h3>
-                <p>進度：{c.chapter - 1} / 24</p>
-                <p>點數：{c.points}</p>
-                <button onClick={() => readChapter(c.id)}>✅ 今日完成一章</button>
-              </div>
-            ))}
-        </div>
+          <h3>孩子管理區（可刪除）</h3>
+          {children.filter(c => c.phone === user).map((c) => (
+            <div key={c.id} style={{ border: "1px solid #ccc", marginBottom: 10, padding: 10 }}>
+              <img src={getRoleImg(c.role, c.points)} width="60" />
+              <h4>{c.name}</h4>
+              <p>章節：{c.chapter - 1} / 24</p>
+              <p>點數：{c.points}</p>
+
+              <button onClick={() => readChapter(c.id)}>📖 今日讀經 +1</button>{" "}
+              <button onClick={() => parentAddPoint(c.id)}>👨‍👩‍👧 家長陪讀 +1</button>{" "}
+              <button onClick={() => deleteChild(c.id)}>❌ 刪除</button>
+            </div>
+          ))}
+        </>
       )}
     </div>
   );

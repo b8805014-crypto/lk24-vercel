@@ -1,195 +1,216 @@
+import { quizData } from "./quizData";
 import { useState, useEffect, useRef } from "react";
 import "./App.css";
 
 const TOTAL_CHAPTERS = 24;
 const STORAGE_KEY = "lk24_children_global";
 
+const roleImages = [
+  { name: "kirby", imgs: ["/roles/kirby1.png", "/roles/kirby2.png", "/roles/kirby3.png"] },
+  { name: "pikachu", imgs: ["/roles/pikachu1.png", "/roles/pikachu2.png", "/roles/pikachu3.png"] },
+  { name: "傑尼龜", imgs: ["/roles/squirtle1.png", "/roles/squirtle2.png", "/roles/squirtle3.png"] },
+  { name: "妙蛙種子", imgs: ["/roles/bulbasaur1.png", "/roles/bulbasaur2.png", "/roles/bulbasaur3.png"] },
+  { name: "小火龍", imgs: ["/roles/charmander1.png", "/roles/charmander2.png", "/roles/charmander3.png"] },
+];
+
 export default function App() {
   const [phone, setPhone] = useState("");
   const [user, setUser] = useState(null);
+  const [page, setPage] = useState("home");
   const [children, setChildren] = useState([]);
 
+  const [fireworksActive, setFireworksActive] = useState(false);
+  const fireworkAudio = useRef(null);
+
+  /* ===== 音效煙火 ===== */
+  const triggerFireworks = () => {
+    setFireworksActive(true);
+    if (!fireworkAudio.current) {
+      fireworkAudio.current = new Audio("/firework.mp3");
+    }
+    fireworkAudio.current.currentTime = 0;
+    fireworkAudio.current.play().catch(() => {});
+    setTimeout(() => setFireworksActive(false), 3000);
+  };
+
   useEffect(() => {
-    const all = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
-    setChildren(all);
+    setChildren(JSON.parse(localStorage.getItem(STORAGE_KEY)) || []);
   }, []);
 
-  // ===== 跑道位置計算 =====
+  /* ===== 登入 ===== */
+  const login = () => {
+    if (!phone) return alert("請輸入手機號碼");
+    setUser(phone);
+    setPage("manage");
+  };
+
+  const logout = () => {
+    setUser(null);
+    setPage("home");
+  };
+
+  /* ===== 跑道位置 ===== */
   const getPosition = (chapter) => {
     const progress = (chapter - 1) / TOTAL_CHAPTERS;
-    const size = 280;
-    const cx = size / 2;
-    const cy = size / 2;
+    const cx = 140;
+    const cy = 140;
     const straight = 70;
     const radius = 60;
-
     const totalLen = 2 * straight + 2 * Math.PI * radius;
     let d = progress * totalLen;
 
-    if (d <= straight) return { x: cx - straight + d, y: cy - radius };
-    d -= straight;
+    if (d <= straight)
+      return { x: cx - straight + d, y: cy - radius };
 
+    d -= straight;
     if (d <= Math.PI * radius) {
       const a = -Math.PI / 2 + d / radius;
       return { x: cx + straight + radius * Math.cos(a), y: cy + radius * Math.sin(a) };
     }
+
     d -= Math.PI * radius;
+    if (d <= straight)
+      return { x: cx + straight - d, y: cy + radius };
 
-    if (d <= straight) return { x: cx + straight - d, y: cy + radius };
     d -= straight;
-
     const a = Math.PI / 2 + d / radius;
     return { x: cx - straight + radius * Math.cos(a), y: cy + radius * Math.sin(a) };
   };
 
+  const getRoleImg = (role, points) => {
+    const r = roleImages.find(r => r.name === role);
+    if (!r) return "";
+    if (points >= 16) return r.imgs[2];
+    if (points >= 8) return r.imgs[1];
+    return r.imgs[0];
+  };
+
+  /* ================= UI ================= */
   return (
     <div style={styles.container}>
-      {/* ===== 主視覺 ===== */}
-      <div style={styles.mainCenter}>
-        <h1 style={styles.title}>📖 路加福音讀經精兵</h1>
+      {fireworksActive && <div className="fireworks-overlay active" />}
 
-        <img
-          src="/gospel.png"
-          alt="愛來去傳福音"
-          style={styles.gospelImage}
-        />
+      {/* ===== 首頁 ===== */}
+      {page === "home" && (
+        <>
+          <h1 style={styles.title}>📖 路加福音讀經精兵</h1>
 
-        {/* ===== 跑道 ===== */}
-        <div style={styles.trackWrap}>
+          {/* 福音圖 */}
           <img
-            src="/track.png"
-            alt="賽跑圈"
-            style={styles.trackImage}
+            src="/gospel.png"
+            alt="福音"
+            style={styles.gospel}
           />
 
-          {children.map((c, idx) => {
-            const pos = getPosition(c.chapter || 1);
-            return (
-              <div
-                key={c.id}
-                style={{
+          {/* 跑道 */}
+          <div style={styles.trackWrap}>
+            <img src="/track.png" alt="track" style={{ width: "100%" }} />
+
+            {children.map(c => {
+              const pos = getPosition(c.chapter);
+              return (
+                <div key={c.id} style={{
                   position: "absolute",
-                  left: pos.x - 12,
-                  top: pos.y - 12,
-                  textAlign: "center",
-                  pointerEvents: "none",
-                }}
-              >
-                <div style={styles.runnerDot}>🏃</div>
-                <div style={styles.runnerName}>{c.name}</div>
-              </div>
-            );
-          })}
+                  left: pos.x - 16,
+                  top: pos.y - 16,
+                  textAlign: "center"
+                }}>
+                  <img src={getRoleImg(c.role, c.points)} width="32" />
+                  <div style={{ fontSize: 10 }}>{c.name}</div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* 經文 */}
+          <div style={styles.verse}>
+            「靠耶和華而得的喜樂是你們的力量」
+            <div style={{ fontSize: 14, textAlign: "right" }}>尼希米記 8:10</div>
+          </div>
+
+          {/* 登入 */}
+          {!user && (
+            <>
+              <input
+                style={styles.input}
+                placeholder="家長手機號碼"
+                value={phone}
+                onChange={e => setPhone(e.target.value)}
+              />
+              <button style={styles.button} onClick={login}>
+                👉 家長登入
+              </button>
+            </>
+          )}
+        </>
+      )}
+
+      {/* ===== 管理頁 ===== */}
+      {page === "manage" && user && (
+        <div style={{ width: "100%" }}>
+          <h2>家長中心</h2>
+          <button onClick={logout}>登出</button>
+
+          {children.filter(c => c.phone === user).map(c => (
+            <div key={c.id} style={styles.card}>
+              <img src={getRoleImg(c.role, c.points)} width="48" />
+              <h4>{c.name}</h4>
+              <p>章節：{c.chapter}</p>
+              <p>點數：{c.points}</p>
+
+              <button onClick={triggerFireworks}>✅ 今日報到 +1</button>
+            </div>
+          ))}
         </div>
-      </div>
-
-      {/* ===== 右 / 下 經文區 ===== */}
-      <div style={styles.verseBox}>
-        <h2 style={styles.verseTitle}>✨ 今日力量經文</h2>
-        <p style={styles.verseText}>
-          「靠耶和華而得的喜樂是你們的力量」
-        </p>
-        <p style={styles.verseFrom}>—— 尼希米記 8:10</p>
-
-        {!user && (
-          <>
-            <input
-              style={styles.input}
-              placeholder="請輸入家長手機號碼"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-            />
-            <button style={styles.button}>👉 家長登入</button>
-          </>
-        )}
-      </div>
+      )}
     </div>
   );
 }
 
-/* =====================
-   ✅ 手機優化 Styles
-===================== */
-
+/* ===== 手機優化樣式 ===== */
 const styles = {
   container: {
-    display: "flex",
-    flexWrap: "wrap",
     minHeight: "100vh",
-  },
-
-  mainCenter: {
-    flex: "1 1 100%",
-    padding: "20px",
+    padding: 16,
     textAlign: "center",
+    fontFamily: "sans-serif"
   },
-
   title: {
-    fontSize: "clamp(26px, 6vw, 42px)",
-    marginBottom: "16px",
+    fontSize: 26,
+    marginBottom: 16
   },
-
-  gospelImage: {
-    width: "min(90vw, 380px)",
-    marginBottom: "20px",
+  gospel: {
+    width: "85%",
+    maxWidth: 320,
+    marginBottom: 16
   },
-
   trackWrap: {
     position: "relative",
-    width: "280px",
-    height: "280px",
-    margin: "0 auto",
+    width: 280,
+    height: 280,
+    margin: "0 auto 20px"
   },
-
-  trackImage: {
-    width: "100%",
-    height: "100%",
-  },
-
-  runnerDot: {
-    fontSize: "16px",
-  },
-
-  runnerName: {
-    fontSize: "10px",
-  },
-
-  verseBox: {
-    flex: "1 1 100%",
-    maxWidth: "360px",
-    margin: "20px auto",
-    padding: "20px",
+  verse: {
     background: "#fff1d6",
-    borderRadius: "16px",
+    padding: 12,
+    borderRadius: 12,
+    marginBottom: 16
   },
-
-  verseTitle: {
-    fontSize: "20px",
-    color: "#d35400",
-  },
-
-  verseText: {
-    fontSize: "clamp(16px, 4.5vw, 20px)",
-    fontWeight: "bold",
-    lineHeight: 1.6,
-  },
-
-  verseFrom: {
-    textAlign: "right",
-    marginBottom: "10px",
-  },
-
   input: {
-    width: "100%",
-    padding: "10px",
-    fontSize: "16px",
-    marginBottom: "10px",
+    width: "90%",
+    padding: 12,
+    fontSize: 16,
+    marginBottom: 10
   },
-
   button: {
-    width: "100%",
-    padding: "12px",
-    fontSize: "16px",
-    cursor: "pointer",
+    width: "90%",
+    padding: 14,
+    fontSize: 16
   },
+  card: {
+    border: "1px solid #ccc",
+    padding: 12,
+    borderRadius: 12,
+    marginBottom: 12
+  }
 };

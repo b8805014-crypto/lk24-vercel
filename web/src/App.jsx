@@ -26,6 +26,23 @@ export default function App() {
   // fireworks / flying points
   const [fireworksActive, setFireworksActive] = useState(false);
   const [flyingItems, setFlyingItems] = useState([]); // {id, style, text}
+  
+  const fireworkAudio = useRef(null);
+
+  const triggerFireworks = () => {
+    setFireworksActive(true);
+
+    if (!fireworkAudio.current) {
+      fireworkAudio.current = new Audio("/firework.mp3");
+    }
+
+    fireworkAudio.current.currentTime = 0;
+    fireworkAudio.current.play();
+
+    setTimeout(() => {
+      setFireworksActive(false);
+    }, 3000);
+  };
 
   useEffect(() => {
     const all = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];

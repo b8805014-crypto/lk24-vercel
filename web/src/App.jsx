@@ -1,5 +1,5 @@
-import { quizData } from "./quizData.js";
-import { useState, useEffect } from "react";
+import { quizData } from "./quizData";
+import { useState, useEffect, useRef } from "react";
 import "./App.css";
 
 const TOTAL_CHAPTERS = 24;
@@ -15,28 +15,26 @@ const roleImages = [
   { name: "綠毛蟲", imgs: ["/roles/caterpie1.png", "/roles/caterpie2.png", "/roles/caterpie3.png"] },
 ];
 
-// -------------（題目你之前說要 1–24 全部，我完整附在後半段）------------------
-import { quizData } from "./quizData"; 
-//（等下我會貼整份 quizData 給你）
-// ---------------------------------------------------------------------
-
 export default function App() {
   const [phone, setPhone] = useState("");
   const [user, setUser] = useState(null);
   const [children, setChildren] = useState([]);
   const [page, setPage] = useState("home");
-  const [parentCheckInToday, setParentCheckInToday] = useState("");
+  const [parentReadToday, setParentReadToday] = useState("");
+  const containerRef = useRef(null);
+
+  // fireworks / flying points
+  const [fireworksActive, setFireworksActive] = useState(false);
+  const [flyingItems, setFlyingItems] = useState([]); // {id, style, text}
 
   useEffect(() => {
     const all = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
     setChildren(all);
 
     const today = new Date().toISOString().slice(0, 10);
-    const saved = localStorage.getItem("parent_check_" + today);
-    if (saved) setParentCheckInToday(today);
+    const saved = localStorage.getItem("parent_read_" + today);
+    if (saved) setParentReadToday(today);
   }, []);
-
-  // ---------------- 登入 / 登出 -----------------------
 
   const login = () => {
     if (!phone) return alert("請輸入手機");
@@ -50,16 +48,15 @@ export default function App() {
     setPage("home");
   };
 
-  // ---------------- 父母簽到 +1 -----------------------
-
-  const parentSignIn = () => {
+  // 家長每日陪讀 +1
+  const parentRead = () => {
     const today = new Date().toISOString().slice(0, 10);
-    if (parentCheckInToday === today) {
-      alert("今天已簽到！");
+    if (parentReadToday === today) {
+      alert("今天已完成陪讀！");
       return;
     }
 
-    // 父母簽到後 → 所有孩子 +1
+    // 為該家長底下的所有孩子 +1
     const updated = children.map((c) => {
       if (c.phone === user) return { ...c, points: c.points + 1 };
       return c;
@@ -68,14 +65,21 @@ export default function App() {
     setChildren(updated);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
 
-    // 記錄簽到
-    localStorage.setItem("parent_check_" + today, "yes");
-    setParentCheckInToday(today);
+    localStorage.setItem("parent_read_" + today, "yes");
+    setParentReadToday(today);
 
-    alert("簽到成功！已為孩子加 1 點");
+    // 啟動煙火 + 點數飛出（中央飛到每個孩子卡位）
+    triggerFireworks();
+    // 讓每個孩子都看見飛分：針對該家長孩子逐一觸發飛分
+    updated.filter(c => c.phone === user).forEach((c, idx) => {
+      // 延遲一點次序性
+      setTimeout(() => {
+        triggerFlyingPoint("+1", c.id);
+      }, idx * 250);
+    });
+
+    alert("今日陪讀完成！已為孩子加 1 點");
   };
-
-  // ---------------- 新增孩子 -----------------------
 
   const addChild = (role) => {
     const name = prompt("請輸入孩子名字");
@@ -105,8 +109,7 @@ export default function App() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
   };
 
-  // ----------------- 答題得分 ------------------------
-
+  // 答題得分（若符合規則會 +1 並觸發煙火＋飛分）
   const answerQuiz = (id, chapter, answers) => {
     const today = new Date().toISOString().slice(0, 10);
     const questions = quizData[chapter];
@@ -121,13 +124,14 @@ export default function App() {
       return;
     }
 
+    let awarded = false;
     const updated = children.map((c) => {
       if (c.id !== id) return c;
       if (c.todayQuiz === today) {
         alert("今天已答題");
         return c;
       }
-
+      awarded = true;
       return {
         ...c,
         points: c.points + 1,
@@ -136,12 +140,23 @@ export default function App() {
       };
     });
 
+    if (!awarded) {
+      // 沒有找到或已答過，直接更新狀態（已在上面做），然後 return
+      setChildren(updated);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+      return;
+    }
+
+    // 更新並觸發動畫
     setChildren(updated);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+
+    // 觸發煙火（短暫）與點數飛出到該孩子卡片
+    triggerFireworks();
+    triggerFlyingPoint("+1", id);
   };
 
   // ------------------- 跑道位置計算 -------------------
-
   const getPosition = (chapter) => {
     const percent = (chapter - 1) / TOTAL_CHAPTERS;
     const angle = percent * 2 * Math.PI - Math.PI / 2;
@@ -171,16 +186,84 @@ export default function App() {
     return offsets[index % offsets.length];
   };
 
- return (
-    <div style={{ padding: 20 }}>
+  // 觸發煙火，短暫顯示
+  const triggerFireworks = () => {
+    setFireworksActive(true);
+    setTimeout(() => setFireworksActive(false), 1500);
+  };
+
+  // 觸發飛分（從畫面中心飛到對應 child 卡的 .child-points）
+  const triggerFlyingPoint = (text, childId) => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const startRect = container.getBoundingClientRect();
+    const startX = startRect.left + startRect.width / 2;
+    const startY = startRect.top + startRect.height / 2;
+
+    // 找到目標元素
+    const card = document.querySelector(`[data-child='${childId}']`);
+    let destX = startX + (Math.random() * 100 - 50);
+    let destY = startY - 150 + (Math.random() * 60 - 30);
+    if (card) {
+      const p = card.querySelector(".child-points");
+      const rect = p ? p.getBoundingClientRect() : card.getBoundingClientRect();
+      destX = rect.left + rect.width / 2;
+      destY = rect.top + rect.height / 2;
+    }
+
+    const id = Date.now() + Math.random();
+    const item = {
+      id,
+      text,
+      startX,
+      startY,
+      destX,
+      destY,
+    };
+
+    setFlyingItems((prev) => [...prev, item]);
+
+    // 自動移除（動畫時間結束）
+    setTimeout(() => {
+      setFlyingItems((prev) => prev.filter((f) => f.id !== id));
+    }, 1200);
+  };
+
+  return (
+    <div ref={containerRef} style={{ padding: 20 }}>
+      {/* fireworks overlay */}
+      <div className={`fireworks-overlay ${fireworksActive ? "active" : ""}`}>
+        {fireworksActive &&
+          Array.from({ length: 20 }).map((_, i) => (
+            <span key={i} className={`firework spark-${i % 5}`} />
+          ))}
+      </div>
+
+      {/* flying points */}
+      {flyingItems.map((f) => (
+        <div
+          key={f.id}
+          className="flying-item"
+          style={{
+            left: f.startX,
+            top: f.startY,
+            transform: `translate(-50%, -50%)`,
+            // NOTE: we animate using CSS variables to compute translate to dest
+            // pass dest positions as data-attrs
+            ["--dest-x"]: `${f.destX}px`,
+            ["--dest-y"]: `${f.destY}px`,
+          }}
+        >
+          <div className="flying-text">{f.text}</div>
+        </div>
+      ))}
 
       {/* ------------------ 首頁 ------------------ */}
       {page === "home" && (
-        <div style={{ display: "flex", gap: 20 }}>
-
-          {/* 左邊：跑道 */}
-          <div style={{ position: "relative" }}>
-            <h1 style={{ textAlign: "center" }}>📖 路加福音讀經精兵</h1>
+        <div className="home-layout">
+          <div className="left-track">
+            <h1 className="title-center">📖 路加福音讀經精兵</h1>
 
             <div style={{ width: 420, height: 420 }}>
               <svg width="420" height="420">
@@ -192,8 +275,6 @@ export default function App() {
                   strokeWidth="22"
                   fill="none"
                 />
-
-                {/* 中央清晰圖示 */}
                 <image
                   href="/center-icon.png"
                   x="140"
@@ -201,7 +282,6 @@ export default function App() {
                   width="140"
                   height="140"
                 />
-
                 {children.map((c, index) => {
                   const pos = getPosition(c.chapter);
                   return (
@@ -229,7 +309,6 @@ export default function App() {
               </svg>
             </div>
 
-            {/* 排行榜 */}
             <h3 style={{ textAlign: "center" }}>🏆 排行榜</h3>
             {[...children]
               .sort((a, b) => b.points - a.points)
@@ -240,27 +319,16 @@ export default function App() {
               ))}
           </div>
 
-          {/* 右邊美編經文 */}
-          <div
-            style={{
-              width: 260,
-              padding: 20,
-              background: "linear-gradient(135deg, #fff7e6, #ffe0b2)",
-              borderRadius: 20,
-              boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
-              height: 300
-            }}
-          >
-            <h2 style={{ color: "#d35400" }}>✨ 今日力量經文</h2>
-            <p style={{ fontSize: 22, fontWeight: "bold", lineHeight: "1.5" }}>
+          {/* 右邊美編經文（靠旁） */}
+          <div className="right-verse">
+            <h2 className="verse-title">✨ 今日力量經文</h2>
+            <p className="verse-main">
               「靠耶和華而得的喜樂是你們的力量」
             </p>
-            <p style={{ textAlign: "right", marginTop: 20, fontWeight: "bold" }}>
-              ——尼希米記 8:10
-            </p>
+            <p className="verse-ref">—— 尼希米記 8:10</p>
 
             {!user && (
-              <div style={{ marginTop: 40 }}>
+              <div style={{ marginTop: 20 }}>
                 <input
                   placeholder="請輸入家長手機號碼"
                   value={phone}
@@ -288,20 +356,13 @@ export default function App() {
 
           <hr />
 
-          {/* 父母簽到 */}
-          <div
-            style={{
-              background: "#e8f5e9",
-              padding: 15,
-              borderRadius: 10,
-              marginBottom: 20
-            }}
-          >
-            <h3>📅 家長每日簽到</h3>
-            {parentCheckInToday ? (
-              <p>✔ 今日已簽到</p>
+          {/* 父母每日陪讀 */}
+          <div className="read-box">
+            <h3>📅 家長每日陪讀</h3>
+            {parentReadToday ? (
+              <p>✔ 今日已陪讀</p>
             ) : (
-              <button onClick={parentSignIn}>👉 今日簽到 +1</button>
+              <button onClick={parentRead}>👉 今日陪讀 +1</button>
             )}
           </div>
 
@@ -325,6 +386,8 @@ export default function App() {
             .map((c) => (
               <div
                 key={c.id}
+                data-child={c.id}
+                className="child-card"
                 style={{
                   border: "1px solid #ccc",
                   padding: 10,
@@ -339,7 +402,7 @@ export default function App() {
                 />
                 <h4>{c.name}</h4>
                 <p>目前章節：{c.chapter}/24</p>
-                <p>目前點數：{c.points}</p>
+                <p className="child-points">目前點數：{c.points}</p>
 
                 {/* 題目 */}
                 <h4>今日問答（第 {c.chapter} 章）</h4>
@@ -370,7 +433,7 @@ export default function App() {
                     answerQuiz(c.id, c.chapter, window.quizAnswers?.[c.id] || [])
                   }
                 >
-                  ✅ 提交答案（需全對）
+                  ✅ 提交答案（需兩題皆正確）
                 </button>
 
                 <button

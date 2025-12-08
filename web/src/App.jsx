@@ -238,13 +238,7 @@ export default function App() {
     return offsets[index % offsets.length];
   };
 
-  // 觸發煙火，短暫顯示
-  const triggerFireworks = () => {
-    setFireworksActive(true);
-    setTimeout(() => setFireworksActive(false), 1500);
-  };
-
-  // 觸發飛分（從畫面中心飛到對應 child 卡的 .child-points）
+   // 觸發飛分（從畫面中心飛到對應 child 卡的 .child-points）
   const triggerFlyingPoint = (text, childId) => {
     const container = containerRef.current;
     if (!container) return;
@@ -313,8 +307,9 @@ export default function App() {
 
       {/* ------------------ 首頁 ------------------ */}
       {page === "home" && (
-        {/* 左邊：跑道 */}
         <div className="left-track">
+          {/* 左邊：跑道 */}
+
           <h1 className="title-center">📖 路加福音讀經精兵</h1>
 
           <div style={{ position: "relative", width: 420, height: 420 }}>

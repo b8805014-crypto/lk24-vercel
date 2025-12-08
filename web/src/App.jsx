@@ -1,4 +1,176 @@
-  return (
+import { useState, useEffect } from "react";
+import "./App.css";
+
+const TOTAL_CHAPTERS = 24;
+const STORAGE_KEY = "lk24_children_global";
+
+// 角色圖
+const roleImages = [
+  { name: "kirby", imgs: ["/roles/kirby1.png", "/roles/kirby2.png", "/roles/kirby3.png"] },
+  { name: "pikachu", imgs: ["/roles/pikachu1.png", "/roles/pikachu2.png", "/roles/pikachu3.png"] },
+  { name: "傑尼龜", imgs: ["/roles/squirtle1.png", "/roles/squirtle2.png", "/roles/squirtle3.png"] },
+  { name: "妙蛙種子", imgs: ["/roles/bulbasaur1.png", "/roles/bulbasaur2.png", "/roles/bulbasaur3.png"] },
+  { name: "小火龍", imgs: ["/roles/charmander1.png", "/roles/charmander2.png", "/roles/charmander3.png"] },
+  { name: "綠毛蟲", imgs: ["/roles/caterpie1.png", "/roles/caterpie2.png", "/roles/caterpie3.png"] },
+];
+
+// -------------（題目你之前說要 1–24 全部，我完整附在後半段）------------------
+import { quizData } from "./quizData"; 
+//（等下我會貼整份 quizData 給你）
+// ---------------------------------------------------------------------
+
+export default function App() {
+  const [phone, setPhone] = useState("");
+  const [user, setUser] = useState(null);
+  const [children, setChildren] = useState([]);
+  const [page, setPage] = useState("home");
+  const [parentCheckInToday, setParentCheckInToday] = useState("");
+
+  useEffect(() => {
+    const all = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+    setChildren(all);
+
+    const today = new Date().toISOString().slice(0, 10);
+    const saved = localStorage.getItem("parent_check_" + today);
+    if (saved) setParentCheckInToday(today);
+  }, []);
+
+  // ---------------- 登入 / 登出 -----------------------
+
+  const login = () => {
+    if (!phone) return alert("請輸入手機");
+    setUser(phone);
+    setPage("manage");
+  };
+
+  const logout = () => {
+    setUser(null);
+    setPhone("");
+    setPage("home");
+  };
+
+  // ---------------- 父母簽到 +1 -----------------------
+
+  const parentSignIn = () => {
+    const today = new Date().toISOString().slice(0, 10);
+    if (parentCheckInToday === today) {
+      alert("今天已簽到！");
+      return;
+    }
+
+    // 父母簽到後 → 所有孩子 +1
+    const updated = children.map((c) => {
+      if (c.phone === user) return { ...c, points: c.points + 1 };
+      return c;
+    });
+
+    setChildren(updated);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+
+    // 記錄簽到
+    localStorage.setItem("parent_check_" + today, "yes");
+    setParentCheckInToday(today);
+
+    alert("簽到成功！已為孩子加 1 點");
+  };
+
+  // ---------------- 新增孩子 -----------------------
+
+  const addChild = (role) => {
+    const name = prompt("請輸入孩子名字");
+    if (!name) return;
+
+    const updated = [
+      ...children,
+      {
+        id: Date.now(),
+        name,
+        role: role.name,
+        phone: user,
+        chapter: 1,
+        points: 0,
+        todayQuiz: ""
+      }
+    ];
+
+    setChildren(updated);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+  };
+
+  const deleteChild = (id) => {
+    if (!confirm("確定刪除嗎？")) return;
+    const updated = children.filter((c) => c.id !== id);
+    setChildren(updated);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+  };
+
+  // ----------------- 答題得分 ------------------------
+
+  const answerQuiz = (id, chapter, answers) => {
+    const today = new Date().toISOString().slice(0, 10);
+    const questions = quizData[chapter];
+
+    let correct = 0;
+    questions.forEach((q, i) => {
+      if (answers[i] === q.answer) correct++;
+    });
+
+    if (correct < 2) {
+      alert("需要兩題都答對才可得點！");
+      return;
+    }
+
+    const updated = children.map((c) => {
+      if (c.id !== id) return c;
+      if (c.todayQuiz === today) {
+        alert("今天已答題");
+        return c;
+      }
+
+      return {
+        ...c,
+        points: c.points + 1,
+        chapter: Math.min(c.chapter + 1, TOTAL_CHAPTERS),
+        todayQuiz: today
+      };
+    });
+
+    setChildren(updated);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+  };
+
+  // ------------------- 跑道位置計算 -------------------
+
+  const getPosition = (chapter) => {
+    const percent = (chapter - 1) / TOTAL_CHAPTERS;
+    const angle = percent * 2 * Math.PI - Math.PI / 2;
+    return {
+      x: 210 + 145 * Math.cos(angle),
+      y: 210 + 145 * Math.sin(angle)
+    };
+  };
+
+  const getRoleImg = (roleName, points) => {
+    const r = roleImages.find((r) => r.name === roleName);
+    if (!r) return "";
+    if (points >= 16) return r.imgs[2];
+    if (points >= 8) return r.imgs[1];
+    return r.imgs[0];
+  };
+
+  const getEvolveClass = (points) => {
+    if (points >= 16) return "evolve-3";
+    if (points >= 8) return "evolve-2";
+    return "evolve-1";
+  };
+
+  // 避免名字重疊
+  const getNameOffset = (index) => {
+    const offsets = [0, -12, 12, -20, 20];
+    return offsets[index % offsets.length];
+  };
+
+ return (
     <div style={{ padding: 20 }}>
 
       {/* ------------------ 首頁 ------------------ */}

@@ -1,166 +1,193 @@
-import { quizData } from "./quizData";
 import { useState, useEffect, useRef } from "react";
 import "./App.css";
 
 const TOTAL_CHAPTERS = 24;
 const STORAGE_KEY = "lk24_children_global";
 
-// 角色圖
-const roleImages = [
-  { name: "kirby", imgs: ["/roles/kirby1.png", "/roles/kirby2.png", "/roles/kirby3.png"] },
-  { name: "pikachu", imgs: ["/roles/pikachu1.png", "/roles/pikachu2.png", "/roles/pikachu3.png"] },
-  { name: "傑尼龜", imgs: ["/roles/squirtle1.png", "/roles/squirtle2.png", "/roles/squirtle3.png"] },
-  { name: "妙蛙種子", imgs: ["/roles/bulbasaur1.png", "/roles/bulbasaur2.png", "/roles/bulbasaur3.png"] },
-  { name: "小火龍", imgs: ["/roles/charmander1.png", "/roles/charmander2.png", "/roles/charmander3.png"] },
-  { name: "綠毛蟲", imgs: ["/roles/caterpie1.png", "/roles/caterpie2.png", "/roles/caterpie3.png"] },
-];
-
 export default function App() {
   const [phone, setPhone] = useState("");
   const [user, setUser] = useState(null);
   const [children, setChildren] = useState([]);
-  const [page, setPage] = useState("home");
-  const [parentReadToday, setParentReadToday] = useState("");
-  const containerRef = useRef(null);
-
-  // ===== 煙火 / 飛分 =====
-  const [fireworksActive, setFireworksActive] = useState(false);
-  const [flyingItems, setFlyingItems] = useState([]);
-  const fireworkAudio = useRef(null);
-
-  const triggerFireworks = () => {
-    setFireworksActive(true);
-    if (!fireworkAudio.current) {
-      fireworkAudio.current = new Audio("/firework.mp3");
-    }
-    fireworkAudio.current.currentTime = 0;
-    fireworkAudio.current.play().catch(() => {});
-    setTimeout(() => setFireworksActive(false), 3000);
-  };
 
   useEffect(() => {
     const all = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
     setChildren(all);
   }, []);
 
-  const login = () => {
-    if (!phone) return alert("請輸入手機");
-    setUser(phone);
-    setPage("manage");
-  };
+  // ===== 跑道位置計算 =====
+  const getPosition = (chapter) => {
+    const progress = (chapter - 1) / TOTAL_CHAPTERS;
+    const size = 280;
+    const cx = size / 2;
+    const cy = size / 2;
+    const straight = 70;
+    const radius = 60;
 
-  const logout = () => {
-    setUser(null);
-    setPhone("");
-    setPage("home");
+    const totalLen = 2 * straight + 2 * Math.PI * radius;
+    let d = progress * totalLen;
+
+    if (d <= straight) return { x: cx - straight + d, y: cy - radius };
+    d -= straight;
+
+    if (d <= Math.PI * radius) {
+      const a = -Math.PI / 2 + d / radius;
+      return { x: cx + straight + radius * Math.cos(a), y: cy + radius * Math.sin(a) };
+    }
+    d -= Math.PI * radius;
+
+    if (d <= straight) return { x: cx + straight - d, y: cy + radius };
+    d -= straight;
+
+    const a = Math.PI / 2 + d / radius;
+    return { x: cx - straight + radius * Math.cos(a), y: cy + radius * Math.sin(a) };
   };
 
   return (
-    <div ref={containerRef} style={{ height: "100vh", display: "flex" }}>
-      {/* ================= 首頁 ================= */}
-      {page === "home" && (
-        <>
-          {/* 中央 */}
-          <div style={styles.mainCenter}>
-            <h1 style={styles.title}>📖 路加福音讀經精兵</h1>
+    <div style={styles.container}>
+      {/* ===== 主視覺 ===== */}
+      <div style={styles.mainCenter}>
+        <h1 style={styles.title}>📖 路加福音讀經精兵</h1>
 
-            <img
-              src="/gospel.png"
-              alt="愛來去傳福音使舊人變新人"
-              style={styles.gospelImage}
-            />
-          </div>
+        <img
+          src="/gospel.png"
+          alt="愛來去傳福音"
+          style={styles.gospelImage}
+        />
 
-          {/* 右側經文 */}
-          <div style={styles.verseBox}>
-            <h2 style={styles.verseTitle}>✨ 今日力量經文</h2>
-            <p style={styles.verseText}>
-              「靠耶和華而得的喜樂是你們的力量」
-            </p>
-            <p style={styles.verseFrom}>—— 尼希米記 8:10</p>
+        {/* ===== 跑道 ===== */}
+        <div style={styles.trackWrap}>
+          <img
+            src="/track.png"
+            alt="賽跑圈"
+            style={styles.trackImage}
+          />
 
-            {!user && (
-              <>
-                <input
-                  style={styles.input}
-                  placeholder="請輸入家長手機號碼"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                />
-                <button style={styles.button} onClick={login}>
-                  👉 家長登入
-                </button>
-              </>
-            )}
-          </div>
-        </>
-      )}
-
-      {/* ================= 管理頁（原功能保留） ================= */}
-      {user && page === "manage" && (
-        <div style={{ padding: 20 }}>
-          <h2>家長中心（{user}）</h2>
-          <button onClick={() => setPage("home")}>回首頁</button>
-          <button onClick={logout} style={{ marginLeft: 10 }}>登出</button>
-
-          <hr />
-          <h3>孩子名單</h3>
-          {children.filter(c => c.phone === user).map(c => (
-            <div key={c.id}>
-              {c.name}（{c.points} 點）
-            </div>
-          ))}
+          {children.map((c, idx) => {
+            const pos = getPosition(c.chapter || 1);
+            return (
+              <div
+                key={c.id}
+                style={{
+                  position: "absolute",
+                  left: pos.x - 12,
+                  top: pos.y - 12,
+                  textAlign: "center",
+                  pointerEvents: "none",
+                }}
+              >
+                <div style={styles.runnerDot}>🏃</div>
+                <div style={styles.runnerName}>{c.name}</div>
+              </div>
+            );
+          })}
         </div>
-      )}
+      </div>
+
+      {/* ===== 右 / 下 經文區 ===== */}
+      <div style={styles.verseBox}>
+        <h2 style={styles.verseTitle}>✨ 今日力量經文</h2>
+        <p style={styles.verseText}>
+          「靠耶和華而得的喜樂是你們的力量」
+        </p>
+        <p style={styles.verseFrom}>—— 尼希米記 8:10</p>
+
+        {!user && (
+          <>
+            <input
+              style={styles.input}
+              placeholder="請輸入家長手機號碼"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+            />
+            <button style={styles.button}>👉 家長登入</button>
+          </>
+        )}
+      </div>
     </div>
   );
 }
 
-/* ================= 樣式 ================= */
+/* =====================
+   ✅ 手機優化 Styles
+===================== */
 
 const styles = {
-  mainCenter: {
-    flex: 1,
+  container: {
     display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    justifyContent: "center",
+    flexWrap: "wrap",
+    minHeight: "100vh",
+  },
+
+  mainCenter: {
+    flex: "1 1 100%",
+    padding: "20px",
     textAlign: "center",
   },
+
   title: {
-    fontSize: "42px",
-    marginBottom: "30px",
+    fontSize: "clamp(26px, 6vw, 42px)",
+    marginBottom: "16px",
   },
+
   gospelImage: {
-    width: "420px",
-    maxWidth: "80%",
+    width: "min(90vw, 380px)",
+    marginBottom: "20px",
   },
-  verseBox: {
-    width: "360px",
-    margin: "20px",
-    padding: "32px",
-    background: "#fff1d6",
-    borderRadius: "20px",
-    display: "flex",
-    flexDirection: "column",
-    gap: "16px",
+
+  trackWrap: {
+    position: "relative",
+    width: "280px",
+    height: "280px",
+    margin: "0 auto",
   },
-  verseTitle: {
-    fontSize: "22px",
-    color: "#d35400",
+
+  trackImage: {
+    width: "100%",
+    height: "100%",
   },
-  verseText: {
-    fontSize: "20px",
-    fontWeight: "bold",
-  },
-  verseFrom: {
-    textAlign: "right",
-  },
-  input: {
-    padding: "10px",
+
+  runnerDot: {
     fontSize: "16px",
   },
+
+  runnerName: {
+    fontSize: "10px",
+  },
+
+  verseBox: {
+    flex: "1 1 100%",
+    maxWidth: "360px",
+    margin: "20px auto",
+    padding: "20px",
+    background: "#fff1d6",
+    borderRadius: "16px",
+  },
+
+  verseTitle: {
+    fontSize: "20px",
+    color: "#d35400",
+  },
+
+  verseText: {
+    fontSize: "clamp(16px, 4.5vw, 20px)",
+    fontWeight: "bold",
+    lineHeight: 1.6,
+  },
+
+  verseFrom: {
+    textAlign: "right",
+    marginBottom: "10px",
+  },
+
+  input: {
+    width: "100%",
+    padding: "10px",
+    fontSize: "16px",
+    marginBottom: "10px",
+  },
+
   button: {
+    width: "100%",
     padding: "12px",
     fontSize: "16px",
     cursor: "pointer",

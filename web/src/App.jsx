@@ -70,7 +70,12 @@ export default function App() {
         alert("今天已讀");
         return c;
       }
-      return { ...c, chapter: Math.min(c.chapter + 1, TOTAL_CHAPTERS), points: c.points + 1, todayRead: today };
+      return {
+        ...c,
+        chapter: Math.min(c.chapter + 1, TOTAL_CHAPTERS),
+        points: c.points + 1,
+        todayRead: today
+      };
     });
     setChildren(updated);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
@@ -118,48 +123,79 @@ export default function App() {
 
       <h1 style={{ textAlign: "center" }}>📖 路加福音 24 章圓形賽跑</h1>
 
-      {/* 首頁 */}
+      {/* ===== 首頁 ===== */}
       {page === "home" && (
         <>
           <div style={{ display: "flex", justifyContent: "center" }}>
-            <svg width="420" height="420" className="bible-watermark">
-              <circle
-                cx="210"
-                cy="210"
-                r="145"
-                stroke="#ffb74d"
-                strokeWidth="22"
-                fill="none"
-                className="track-animate"
+            {/* 外層容器（解決模糊用） */}
+            <div style={{ position: "relative", width: 420, height: 420 }}>
+
+              {/* 背景水印層（只會淡化背景，不影響主圖） */}
+              <div
+                style={{
+                  position: "absolute",
+                  inset: 0,
+                  backgroundImage: 'url("/bible-bg.png")',
+                  backgroundRepeat: "no-repeat",
+                  backgroundPosition: "center",
+                  backgroundSize: "240px",
+                  opacity: 0.15,
+                  pointerEvents: "none"
+                }}
               />
 
-              <text x="190" y="30">🏁 START</text>
+              {/* 主 SVG 圖層（清晰不模糊） */}
+              <svg width="420" height="420">
+                <circle
+                  cx="210"
+                  cy="210"
+                  r="145"
+                  stroke="#ffb74d"
+                  strokeWidth="22"
+                  fill="none"
+                  className="track-animate"
+                />
 
-              {children.map((c) => {
-                const pos = getPosition(c.chapter);
-                return (
-                  <g key={c.id}>
-                    <image
-                      href={getRoleImg(c.role, c.points)}
-                      x={pos.x - 18}
-                      y={pos.y - 18}
-                      width="36"
-                      height="36"
-                      className={getEvolveClass(c.points)}
-                    />
-                    <text x={pos.x} y={pos.y - 22} fontSize="10" textAnchor="middle">
-                      {c.name}
-                    </text>
-                  </g>
-                );
-              })}
+                <text x="190" y="30">🏁 START</text>
 
-              <text x="210" y="215" textAnchor="middle" fontWeight="bold">
-                LUKE 24
-              </text>
-            </svg>
+                {children.map((c) => {
+                  const pos = getPosition(c.chapter);
+                  return (
+                    <g key={c.id}>
+                      <image
+                        href={getRoleImg(c.role, c.points)}
+                        x={pos.x - 18}
+                        y={pos.y - 18}
+                        width="36"
+                        height="36"
+                        className={getEvolveClass(c.points)}
+                      />
+                      <text
+                        x={pos.x}
+                        y={pos.y - 22}
+                        fontSize="10"
+                        textAnchor="middle"
+                      >
+                        {c.name}
+                      </text>
+                    </g>
+                  );
+                })}
+
+                <text
+                  x="210"
+                  y="215"
+                  textAnchor="middle"
+                  fontWeight="bold"
+                >
+                  LUKE 24
+                </text>
+              </svg>
+
+            </div>
           </div>
 
+          {/* 排行榜 */}
           <h3 style={{ textAlign: "center" }}>🏆 排行榜</h3>
           {[...children]
             .sort((a, b) => b.points - a.points)
@@ -170,7 +206,7 @@ export default function App() {
             ))}
 
           {!user && (
-            <div style={{ textAlign: "center" }}>
+            <div style={{ textAlign: "center", marginTop: 20 }}>
               <input
                 placeholder="請輸入手機"
                 value={phone}
@@ -183,13 +219,13 @@ export default function App() {
         </>
       )}
 
-      {/* 管理頁 */}
+      {/* ===== 管理頁 ===== */}
       {user && page === "manage" && (
         <>
           <div>
             登入中：{user}
-            <button onClick={() => setPage("home")}>回首頁</button>
-            <button onClick={logout}>登出</button>
+            <button onClick={() => setPage("home")} style={{ marginLeft: 10 }}>回首頁</button>
+            <button onClick={logout} style={{ marginLeft: 10 }}>登出</button>
           </div>
 
           <h3>新增孩子</h3>
@@ -213,13 +249,12 @@ export default function App() {
                 width="60"
                 className={getEvolveClass(c.points)}
               />
-
               <h4>{c.name}</h4>
               <p>章節：{c.chapter - 1}/24</p>
               <p>點數：{c.points}</p>
 
-              <button onClick={() => readChapter(c.id)}>📖 讀經 +1</button>
-              <button onClick={() => parentAddPoint(c.id)}>👨‍👩‍👧 陪讀 +1</button>
+              <button onClick={() => readChapter(c.id)}>📖 讀經 +1</button>{" "}
+              <button onClick={() => parentAddPoint(c.id)}>👨‍👩‍👧 陪讀 +1</button>{" "}
               <button onClick={() => deleteChild(c.id)}>❌ 刪除</button>
             </div>
           ))}

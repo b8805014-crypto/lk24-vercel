@@ -4,11 +4,11 @@ const TOTAL_CHAPTERS = 24;
 const STORAGE_KEY = "lk24_children_global";
 
 const roleImages = [
-  { name: "皮卡丘", img: "/roles/pikachu.png" },
-  { name: "瑪利歐", img: "/roles/mario.png" },
-  { name: "音速小子", img: "/roles/sonic.png" },
-  { name: "卡比", img: "/roles/kirby.png" },
-  { name: "薩爾達", img: "/roles/zelda.png" }
+  { name: "皮卡丘", imgs: ["/roles/pikachu1.png", "/roles/pikachu2.png", "/roles/pikachu3.png"] },
+  { name: "瑪利歐", imgs: ["/roles/mario1.png", "/roles/mario2.png", "/roles/mario3.png"] },
+  { name: "音速小子", imgs: ["/roles/sonic1.png", "/roles/sonic2.png", "/roles/sonic3.png"] },
+  { name: "卡比", imgs: ["/roles/kirby1.png", "/roles/kirby2.png", "/roles/kirby3.png"] },
+  { name: "薩爾達", imgs: ["/roles/zelda1.png", "/roles/zelda2.png", "/roles/zelda3.png"] },
 ];
 
 export default function App() {
@@ -39,7 +39,6 @@ export default function App() {
       id: Date.now(),
       name,
       role: role.name,
-      roleImg: role.img,
       phone: user,
       chapter: 1,
       points: 0,
@@ -47,6 +46,13 @@ export default function App() {
     };
 
     const updated = [...children, child];
+    setChildren(updated);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+  };
+
+  const deleteChild = (id) => {
+    if (!confirm("確定要刪除這個孩子嗎？")) return;
+    const updated = children.filter((c) => c.id !== id);
     setChildren(updated);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
   };
@@ -64,7 +70,7 @@ export default function App() {
 
       return {
         ...child,
-        chapter: child.chapter + 1,
+        chapter: Math.min(child.chapter + 1, TOTAL_CHAPTERS),
         points: child.points + 1,
         today
       };
@@ -75,24 +81,29 @@ export default function App() {
   };
 
   const stageText = (points) => {
-    if (points >= 24) return "🏆 第三階段完成";
-    if (points >= 16) return "🥈 第二階段完成";
-    if (points >= 8) return "🥉 第一階段完成";
+    if (points >= 16) return "🏆 第三階段完成";
+    if (points >= 8) return "🥈 第二階段完成";
+    if (points >= 1) return "🥉 第一階段完成";
     return "起跑中";
+  };
+
+  const getRoleImg = (roleName, points) => {
+    const role = roleImages.find(r => r.name === roleName);
+    if (!role) return "";
+    if (points >= 16) return role.imgs[2];
+    if (points >= 8) return role.imgs[1];
+    return role.imgs[0];
   };
 
   // === 圓形跑道位置計算 ===
   const getPosition = (chapter) => {
     const percent = (chapter - 1) / TOTAL_CHAPTERS;
     const angle = percent * 2 * Math.PI - Math.PI / 2;
-
     const r = 140;
     const cx = 200;
     const cy = 200;
-
     const x = cx + r * Math.cos(angle);
     const y = cy + r * Math.sin(angle);
-
     return { x, y };
   };
 
@@ -100,66 +111,44 @@ export default function App() {
     <div style={{ padding: 20 }}>
       <h1 style={{ textAlign: "center" }}>📖 路加福音 24 章圓形賽跑</h1>
 
-      {/* === 圓形賽跑 SVG === */}
       <div style={{ display: "flex", justifyContent: "center", marginBottom: 30 }}>
         <svg width="400" height="400" style={{ background: "#f5f5f5", borderRadius: "50%" }}>
-          {/* 圓形跑道 */}
-          <circle
-            cx="200"
-            cy="200"
-            r="140"
-            stroke="#c49a6c"
-            strokeWidth="20"
-            fill="none"
-          />
-
-          {/* 起點 */}
+          <circle cx="200" cy="200" r="140" stroke="#c49a6c" strokeWidth="20" fill="none" />
           <text x="190" y="40" fontSize="12">START</text>
 
-          {/* 孩子角色顯示 */}
           {children.map((c) => {
             const pos = getPosition(c.chapter);
             return (
               <g key={c.id}>
-                {/* 角色圖 */}
                 <image
-                  href={c.roleImg}
+                  href={getRoleImg(c.role, c.points)}
                   x={pos.x - 15}
                   y={pos.y - 15}
                   width="30"
                   height="30"
                 />
-
-                {/* 名字 */}
-                <text
-                  x={pos.x}
-                  y={pos.y - 20}
-                  fontSize="10"
-                  textAnchor="middle"
-                >
-                  {c.name}
-                </text>
+                <text x={pos.x} y={pos.y - 20} fontSize="10" textAnchor="middle">{c.name}</text>
               </g>
             );
           })}
         </svg>
       </div>
 
-      {/* === 進度列表 === */}
+      {/* 進度列表 */}
       <div>
         {children.map((c) => (
           <div key={c.id} style={{ marginBottom: 10 }}>
-            <img src={c.roleImg} width="40" style={{ verticalAlign: "middle" }} />
+            <img src={getRoleImg(c.role, c.points)} width="40" style={{ verticalAlign: "middle" }} />
             <strong style={{ marginLeft: 10 }}>{c.name}</strong>
             <span style={{ marginLeft: 10 }}>{stageText(c.points)}</span>
             <div>進度：{c.chapter - 1} / 24</div>
+            <button onClick={() => deleteChild(c.id)} style={{ marginLeft: 10 }}>❌ 刪除</button>
           </div>
         ))}
       </div>
 
       <hr />
 
-      {/* === 登入區 === */}
       {!user ? (
         <div style={{ textAlign: "center" }}>
           <h3>家長登入</h3>
@@ -182,7 +171,7 @@ export default function App() {
           <div style={{ display: "flex", gap: 15 }}>
             {roleImages.map((r) => (
               <div key={r.name} style={{ textAlign: "center" }}>
-                <img src={r.img} width="60" />
+                <img src={r.imgs[0]} width="60" />
                 <div>{r.name}</div>
                 <button onClick={() => addChild(r)}>選擇</button>
               </div>
@@ -195,14 +184,11 @@ export default function App() {
             .filter((c) => c.phone === user)
             .map((c) => (
               <div key={c.id} style={{ border: "1px solid #ccc", padding: 10, marginBottom: 10 }}>
-                <img src={c.roleImg} width="60" />
+                <img src={getRoleImg(c.role, c.points)} width="60" />
                 <h3>{c.name}</h3>
                 <p>進度：{c.chapter - 1} / 24</p>
                 <p>點數：{c.points}</p>
-
-                <button onClick={() => readChapter(c.id)}>
-                  ✅ 今日完成一章
-                </button>
+                <button onClick={() => readChapter(c.id)}>✅ 今日完成一章</button>
               </div>
             ))}
         </div>

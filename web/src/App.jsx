@@ -300,25 +300,13 @@ export default function App() {
         <div className="left-track">
           <h1 className="title-center">📖 路加福音讀經精兵</h1>
 
-          <div
-            style={{
-              width: 420,
-              height: 420,
-              position: "relative",
-            }}
-          >
-            {/* 賽跑圖底圖 */}
+          <div style={{ position: "relative", width: 420, height: 420 }}>
             <img
               src="/track.png"
               alt="track"
-              style={{
-                width: "100%",
-                height: "100%",
-                objectFit: "contain"
-              }}
+              style={{ width: "100%", height: "100%" }}
             />
-
-            {/* 角色疊在跑道上 */}
+           
             {children.map((c, index) => {
               const pos = getPosition(c.chapter);
               return (
@@ -337,13 +325,7 @@ export default function App() {
                    width="36"
                    className={getEvolveClass(c.points)}
                  />
-                 <div
-                   style={{
-                     fontSize: 10,
-                     marginTop: -2,
-                     transform: `translateY(${getNameOffset(index)}px)`
-                   }}
-                 >
+                 <div style={{ fontSize: 10 }}>
                    {c.name}
                  </div>
                </div>
